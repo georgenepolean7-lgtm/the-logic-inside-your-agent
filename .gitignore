@@ -1,0 +1,22 @@
+# Virtual environment
+.venv/
+env/
+venv/
+
+# WhatsApp persistent session data
+whatsapp_session/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Secrets & Environment
+.env
+
+# SQLite WAL & temp files
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Track database
+!products_history.db
