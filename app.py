@@ -319,7 +319,7 @@ with st.sidebar:
     with col_btn1:
         if st.button("🔄 Scan Market", use_container_width=True, help="Scrapes Amazon India and Meesho"):
             with st.spinner("Scanning live market listings..."):
-                scraped = run_full_scan(allow_simulation_fallback=True)
+                scraped = run_full_scan(allow_simulation_fallback=False)
                 st.success(f"Scanned {len(scraped)} items!")
                 st.rerun()
 
@@ -1060,6 +1060,7 @@ with tab2:
 # ==========================================
 with tab3:
     st.markdown("### 🛒 Future Website Shortlist & Multi-Platform Exporter")
+    st.warning("Sourcing cost, suggested selling price and margin are estimates—not verified supplier quotes. Confirm supplier price, shipping, taxes, fees, returns and affiliate eligibility before spending money.")
     st.markdown("Products vetted for your future direct-to-consumer standalone store (Shopify, WooCommerce, or Custom Site).")
 
     if not shortlisted_items:
