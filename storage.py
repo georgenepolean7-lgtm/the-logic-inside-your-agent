@@ -378,9 +378,12 @@ def get_all_products_with_latest_data(db_path: str = DB_FILE) -> List[Dict[str, 
     for r in rows:
         item = dict(r)
         pid = item["product_id"]
-        item["price_change_7d"] = calculate_7day_price_change(pid, db_path)
-        item["review_velocity_7d"] = calculate_review_velocity(pid, 7, db_path)
-        item["bsr_improvement_7d"] = calculate_bsr_improvement(pid, 7, db_path)
+        # Historical rows created before source/provenance tracking may contain simulated
+        # values. Do not expose them as verified trend signals. Re-enable these metrics only
+        # after a source-verification migration is implemented.
+        item["price_change_7d"] = None
+        item["review_velocity_7d"] = None
+        item["bsr_improvement_7d"] = None
         enriched_products.append(item)
     return enriched_products
 
