@@ -13,6 +13,8 @@ class DataIntegrityTests(unittest.TestCase):
         self.assertEqual(result["positive_count"], 0)
         self.assertEqual(result["negative_count"], 0)
         self.assertEqual(result["total_analyzed"], 0)
+        self.assertIsNone(result["intent_score"])
+        self.assertIn("Unavailable", result["dominant_phrase"])
 
 
 if __name__ == "__main__":
