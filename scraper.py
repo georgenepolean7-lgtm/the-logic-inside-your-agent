@@ -136,11 +136,11 @@ def scrape_amazon_india(search_term: str = "kitchen gadgets under 1000", max_ite
 
             # Rating
             rating_el = item.select_one("i.a-icon-star-small span, span.a-icon-alt")
-            rating = clean_rating(rating_el.text if rating_el else None) or 4.0
+            rating = clean_rating(rating_el.text if rating_el else None)
 
             # Reviews
             rev_el = item.select_one("span.a-size-base.s-underline-text, a[href*='customerReviews'] span")
-            rev_count = clean_review_count(rev_el.text if rev_el else "50")
+            rev_count = clean_review_count(rev_el.text if rev_el else None)
 
             # Link & Image
             link_el = item.select_one("h2 a")
@@ -157,7 +157,7 @@ def scrape_amazon_india(search_term: str = "kitchen gadgets under 1000", max_ite
                 "price": price,
                 "rating": rating,
                 "review_count": rev_count,
-                "bsr_rank": rank_pos * 40 + random.randint(10, 50),
+                "bsr_rank": None,  # Search position is not a verified bestseller rank
                 "url": p_url,
                 "image_url": img_url,
                 "recent_reviews_text": f"Scraped live from Amazon.in. Rating {rating}/5 with {rev_count} total buyer ratings."
@@ -206,10 +206,10 @@ def scrape_meesho(category: str = "kitchen", max_items: int = 8) -> List[Dict[st
                 continue
 
             rating_el = card.select_one("span[class*='Rating'], div[class*='Rating']")
-            rating = clean_rating(rating_el.text if rating_el else None) or 4.1
+            rating = clean_rating(rating_el.text if rating_el else None)
 
             rev_el = card.select_one("span[class*='ReviewCount'], p[class*='Review']")
-            rev_count = clean_review_count(rev_el.text if rev_el else "60")
+            rev_count = clean_review_count(rev_el.text if rev_el else None)
 
             link_el = card.select_one("a")
             p_url = f"https://www.meesho.com{link_el['href']}" if (link_el and 'href' in link_el.attrs) else f"https://www.meesho.com/search?q={category}"
@@ -227,7 +227,7 @@ def scrape_meesho(category: str = "kitchen", max_items: int = 8) -> List[Dict[st
                 "price": price,
                 "rating": rating,
                 "review_count": rev_count,
-                "bsr_rank": rank_pos * 35 + random.randint(15, 60),
+                "bsr_rank": None,  # Search position is not a verified bestseller rank
                 "url": p_url,
                 "image_url": img_url,
                 "recent_reviews_text": f"Scraped from Meesho catalog. Rating {rating}/5."
@@ -404,7 +404,7 @@ def import_products_from_csv(csv_file_or_path: Any) -> int:
 
 def run_full_scan(
     search_queries: Optional[List[str]] = None,
-    allow_simulation_fallback: bool = True
+    allow_simulation_fallback: bool = False
 ) -> List[Dict[str, Any]]:
     """
     Executes a market scan for Amazon India and Meesho.
@@ -459,5 +459,5 @@ def run_full_scan(
 
 
 if __name__ == "__main__":
-    results = run_full_scan(allow_simulation_fallback=True)
+    results = run_full_scan(allow_simulation_fallback=False)
     print(f"Scrape scan completed. Captured {len(results)} products.")
