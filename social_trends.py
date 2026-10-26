@@ -109,16 +109,13 @@ def get_google_trends_interest_7d(keyword: str) -> Dict[str, Any]:
     except Exception as e:
         logger.debug(f"Pytrends live call bypassed: {e}")
 
-    # Deterministic resilient fallback generator based on keyword hash
-    h = abs(hash(keyword)) % 40
-    base_score = 60 + h
-    growth_pct = round(15.0 + (h * 1.5), 1)
-
+    # Do not fabricate trend metrics when the live source is unavailable.
     return {
-        "source": "Google Trends (Live-Calibrated)",
-        "score": base_score,
-        "growth_7d_pct": growth_pct,
-        "search_volume_level": "Rising Viral" if growth_pct > 30 else "High Demand"
+        "source": "unavailable",
+        "data_status": "unavailable",
+        "score": None,
+        "growth_7d_pct": None,
+        "search_volume_level": "Unavailable"
     }
 
 
@@ -146,29 +143,17 @@ def fetch_social_media_buzz(product_title: str) -> Dict[str, Any]:
     except Exception as e:
         logger.debug(f"Social live search fallback triggered: {e}")
 
-    # Synthesize intent comments sample
-    seed_comments = [
-        "Link please bro, urgent need for home!",
-        "Price kitna hai? Where to buy this?",
-        "PP link send karo na",
-        "Ordered last week, quality is really awesome for this price",
-        "Need this! Does it work for all sizes?",
-        "Link pls bro"
-    ]
-
-    buyer_analysis = analyze_buyer_intent(seed_comments + social_snippets[:3])
-
-    h = abs(hash(product_title)) % 25
-    views_score = min(98, 72 + h)
-    platform = "Instagram Reels" if (h % 2 == 0) else "YouTube Shorts"
-
+    # Analyze only real search snippets; never inject synthetic comments or scores.
+    buyer_analysis = analyze_buyer_intent(social_snippets) if social_snippets else None
     return {
-        "platform": platform,
-        "social_views_score": views_score,
-        "buyer_intent_score": buyer_analysis["intent_score"],
-        "dominant_intent_phrase": buyer_analysis["dominant_phrase"],
-        "video_references": video_urls[:2] if video_urls else [f"https://www.instagram.com/explore/tags/amazonfindsindia/"],
-        "sample_buyer_comments": seed_comments[:3]
+        "platform": "search results" if video_urls else "unavailable",
+        "data_status": "live_search_results" if social_snippets else "unavailable",
+        "social_views_score": None,
+        "buyer_intent_score": buyer_analysis["intent_score"] if buyer_analysis else None,
+        "dominant_intent_phrase": buyer_analysis["dominant_phrase"] if buyer_analysis else None,
+        "video_references": video_urls[:2],
+        "sample_buyer_comments": [],
+        "source_snippets": social_snippets[:3]
     }
 
 
