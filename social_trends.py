@@ -47,7 +47,7 @@ def analyze_buyer_intent(comments: List[str]) -> Dict[str, Any]:
     Analyzes social comments to calculate high-intent buyer ratio vs negative friction ratio.
     """
     if not comments:
-        return {"intent_score": 60, "positive_count": 0, "negative_count": 0, "dominant_phrase": "Neutral demand"}
+        return {"intent_score": None, "positive_count": 0, "negative_count": 0, "total_analyzed": 0, "dominant_phrase": "Unavailable: no comments"}
 
     pos_matches = 0
     neg_matches = 0
@@ -70,7 +70,7 @@ def analyze_buyer_intent(comments: List[str]) -> Dict[str, Any]:
 
     total = len(comments)
     net_score = max(10, min(99, int(50 + (pos_matches * 12) - (neg_matches * 15))))
-    most_common = max(set(detected_intent_phrases), key=detected_intent_phrases.count) if detected_intent_phrases else "Link please"
+    most_common = max(set(detected_intent_phrases), key=detected_intent_phrases.count) if detected_intent_phrases else "No buyer-intent phrase detected"
 
     return {
         "intent_score": net_score,
@@ -109,16 +109,13 @@ def get_google_trends_interest_7d(keyword: str) -> Dict[str, Any]:
     except Exception as e:
         logger.debug(f"Pytrends live call bypassed: {e}")
 
-    # Deterministic resilient fallback generator based on keyword hash
-    h = abs(hash(keyword)) % 40
-    base_score = 60 + h
-    growth_pct = round(15.0 + (h * 1.5), 1)
-
+    # Do not fabricate trend metrics when the live source is unavailable.
     return {
-        "source": "Google Trends (Live-Calibrated)",
-        "score": base_score,
-        "growth_7d_pct": growth_pct,
-        "search_volume_level": "Rising Viral" if growth_pct > 30 else "High Demand"
+        "source": "unavailable",
+        "data_status": "unavailable",
+        "score": None,
+        "growth_7d_pct": None,
+        "search_volume_level": "Unavailable"
     }
 
 
@@ -146,29 +143,17 @@ def fetch_social_media_buzz(product_title: str) -> Dict[str, Any]:
     except Exception as e:
         logger.debug(f"Social live search fallback triggered: {e}")
 
-    # Synthesize intent comments sample
-    seed_comments = [
-        "Link please bro, urgent need for home!",
-        "Price kitna hai? Where to buy this?",
-        "PP link send karo na",
-        "Ordered last week, quality is really awesome for this price",
-        "Need this! Does it work for all sizes?",
-        "Link pls bro"
-    ]
-
-    buyer_analysis = analyze_buyer_intent(seed_comments + social_snippets[:3])
-
-    h = abs(hash(product_title)) % 25
-    views_score = min(98, 72 + h)
-    platform = "Instagram Reels" if (h % 2 == 0) else "YouTube Shorts"
-
+    # Analyze only real search snippets; never inject synthetic comments or scores.
+    buyer_analysis = analyze_buyer_intent(social_snippets) if social_snippets else None
     return {
-        "platform": platform,
-        "social_views_score": views_score,
-        "buyer_intent_score": buyer_analysis["intent_score"],
-        "dominant_intent_phrase": buyer_analysis["dominant_phrase"],
-        "video_references": video_urls[:2] if video_urls else [f"https://www.instagram.com/explore/tags/amazonfindsindia/"],
-        "sample_buyer_comments": seed_comments[:3]
+        "platform": "search results" if video_urls else "unavailable",
+        "data_status": "live_search_results" if social_snippets else "unavailable",
+        "social_views_score": None,
+        "buyer_intent_score": buyer_analysis["intent_score"] if buyer_analysis else None,
+        "dominant_intent_phrase": buyer_analysis["dominant_phrase"] if buyer_analysis else None,
+        "video_references": video_urls[:2],
+        "sample_buyer_comments": [],
+        "source_snippets": social_snippets[:3]
     }
 
 
@@ -181,41 +166,5 @@ def generate_7day_social_history(
     Generates realistic, continuous 7-day social metrics history (Day -6 to Day 0)
     capturing viral momentum, view velocity, and Google Trends spike.
     """
-    records = []
-    today = datetime.now()
-
-    # Determine product viral persona
-    h = abs(hash(product_id))
-    trend_type = "viral_spike" if h % 3 == 0 else ("steady_growth" if h % 3 == 1 else "cooling")
-    platform = "Instagram Reels" if h % 2 == 0 else "YouTube Shorts"
-
-    for day_offset in range(-6, 1):
-        target_date = (today + timedelta(days=day_offset)).strftime("%Y-%m-%d")
-        progress = (day_offset + 6) / 6.0  # 0.0 to 1.0
-
-        if trend_type == "viral_spike":
-            v_score = int(base_viral_score * 0.65 + (progress * base_viral_score * 0.40))
-            intent_score = int(60 + (progress * 35))
-            g_score = int(55 + (progress * 42))
-        elif trend_type == "steady_growth":
-            v_score = int(base_viral_score * 0.80 + (progress * 15))
-            intent_score = int(68 + (progress * 22))
-            g_score = int(65 + (progress * 20))
-        else:
-            v_score = max(30, int(base_viral_score - (progress * 25)))
-            intent_score = max(25, int(70 - (progress * 30)))
-            g_score = max(20, int(60 - (progress * 35)))
-
-        velocity_7d = round((v_score - (base_viral_score * 0.65)) / max(1, base_viral_score * 0.65) * 100, 1)
-
-        records.append({
-            "product_id": product_id,
-            "date": target_date,
-            "social_views_score": min(99, max(15, v_score)),
-            "buyer_intent_comments_score": min(99, max(15, intent_score)),
-            "google_trend_score": min(99, max(15, g_score)),
-            "viral_velocity_7d": velocity_7d,
-            "trending_platform": platform
-        })
-
-    return records
+    # Synthetic history is not evidence of real demand; wait for verified metrics.
+    return []

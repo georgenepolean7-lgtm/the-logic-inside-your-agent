@@ -89,7 +89,7 @@ def update_env_variable(key: str, value: str, env_path: str = ".env") -> None:
 
 
 def build_current_whatsapp_report(limit: int = 3) -> str:
-    """Builds a formatted WhatsApp report of winning products."""
+    """Build a report without inventing missing prices or sellability scores."""
     shortlisted = get_shortlist()
     if not shortlisted:
         all_p = get_all_products_with_latest_data()
@@ -97,31 +97,30 @@ def build_current_whatsapp_report(limit: int = 3) -> str:
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     msg = (
-        f"🚀 *The Logic Inside Your Agent — Winning Products Report*\n"
-        f"🎯 Focus: ₹100–₹1,000 Sweet Spot (Amazon & Meesho)\n"
-        f"📅 Date: {now_str}\n\n"
+        f"🚀 *The Logic Inside Your Agent — Product Research Report*\\n"
+        f"🎯 Focus: ₹100–₹1,000 (Amazon & Meesho)\\n"
+        f"📅 Date: {now_str}\\n\\n"
     )
     if not shortlisted:
-        msg += "⚠️ No shortlisted products yet. Run a market scan from your dashboard!"
-        return msg
+        return msg + "⚠️ No verified shortlist available yet. Run a live market scan first."
 
     for i, item in enumerate(shortlisted[:limit], 1):
-        p_name = item.get("title", "")
-        m_price = item.get("current_market_price", 0) or item.get("price", 0)
-        s_price = item.get("custom_selling_price") or item.get("recommended_selling_price") or (m_price * 1.5)
-        score = item.get("sellability_score") or 85
-        tanglish = item.get("marketing_angle_for_website") or "High demand impulse buy item."
+        p_name = item.get("title", "Untitled product")
+        m_price = item.get("current_market_price", item.get("price"))
+        s_price = item.get("custom_selling_price") or item.get("recommended_selling_price")
+        score = item.get("sellability_score")
+        tanglish = item.get("marketing_angle_for_website") or "Marketing angle not yet verified."
+        market_text = f"₹{m_price:.0f}" if isinstance(m_price, (int, float)) else "Unavailable"
+        sell_text = f"₹{s_price:.0f}" if isinstance(s_price, (int, float)) else "Not estimated"
+        score_text = f"{score}/100" if isinstance(score, (int, float)) else "Not scored"
         msg += (
-            f"-----------------------------\n"
-            f"📦 *#{i}: {p_name[:60]}*\n"
-            f"💰 Market Price: ₹{m_price:.0f} | 🎯 Website Price: ₹{s_price:.0f}\n"
-            f"⭐ Score: `{score}/100`\n"
-            f"🗣️ *Hook:* _{tanglish[:90]}_\n"
+            f"-----------------------------\\n"
+            f"📦 *#{i}: {p_name[:60]}*\\n"
+            f"💰 Market Price: {market_text} | Suggested Price: {sell_text}\\n"
+            f"⭐ Score: `{score_text}`\\n"
+            f"🗣️ *Hook:* _{tanglish[:90]}_\\n"
         )
-    msg += (
-        f"-----------------------------\n"
-        f"👉 Ready for Shopify/WooCommerce catalog export."
-    )
+    msg += "-----------------------------\\n⚠️ Verify live price, seller, stock, and affiliate eligibility before publishing."
     return msg
 
 # Page configuration
@@ -192,7 +191,7 @@ def get_global_auto_scheduler(default_interval_minutes: int = 5) -> BackgroundSc
 
 
 # Initialize global scheduler on app load (active by default)
-global_scheduler = get_global_auto_scheduler(default_interval_minutes=5)
+global_scheduler = get_global_auto_scheduler(default_interval_minutes=240)
 
 
 # Custom UI Styling
@@ -320,15 +319,15 @@ with st.sidebar:
     with col_btn1:
         if st.button("🔄 Scan Market", use_container_width=True, help="Scrapes Amazon India and Meesho"):
             with st.spinner("Scanning live market listings..."):
-                scraped = run_full_scan(allow_simulation_fallback=True)
+                scraped = run_full_scan(allow_simulation_fallback=False)
                 st.success(f"Scanned {len(scraped)} items!")
                 st.rerun()
 
     with col_btn2:
-        if st.button("🧪 Seed Demo", use_container_width=True, help="Loads 10 realistic Indian products with 7-day history"):
+        if st.button("🧪 Load SYNTHETIC DEMO (not real)", use_container_width=True, help="TEST DATA ONLY. Never use demo rows for sourcing or buying decisions."):
             with st.spinner("Seeding 10 demo products..."):
                 seed_demo_data()
-                st.success("Seeded successfully!")
+                st.warning("Synthetic demo data loaded for UI testing only. These are not verified listings, reviews, trends or supplier prices.")
                 st.rerun()
 
     if st.button("🤖 Run AI Analysis on All", use_container_width=True, type="primary"):
@@ -355,7 +354,7 @@ with st.sidebar:
         "4 Hours (Recommended)": 240,
         "12 Hours": 720
     }
-    selected_interval_label = st.selectbox("Auto Cycle Interval", list(interval_options.keys()), index=0)
+    selected_interval_label = st.selectbox("Auto Cycle Interval", list(interval_options.keys()), index=2)
     selected_interval = interval_options[selected_interval_label]
 
     # Dynamically update scheduler job interval if user changed selectbox
@@ -1061,6 +1060,7 @@ with tab2:
 # ==========================================
 with tab3:
     st.markdown("### 🛒 Future Website Shortlist & Multi-Platform Exporter")
+    st.warning("Sourcing cost, suggested selling price and margin are estimates—not verified supplier quotes. Confirm supplier price, shipping, taxes, fees, returns and affiliate eligibility before spending money.")
     st.markdown("Products vetted for your future direct-to-consumer standalone store (Shopify, WooCommerce, or Custom Site).")
 
     if not shortlisted_items:
@@ -1070,15 +1070,18 @@ with tab3:
         st.markdown("#### 💰 **Estimated Portfolio Economics**")
         calc_col1, calc_col2, calc_col3, calc_col4 = st.columns(4)
 
-        total_sourcing = sum(item.get("estimated_sourcing_cost") or (item.get("current_market_price", 0) * 0.4) for item in shortlisted_items)
-        total_retail = sum(item.get("custom_selling_price") or item.get("recommended_selling_price") or (item.get("current_market_price", 0) * 1.5) for item in shortlisted_items)
-        gross_profit_per_basket = total_retail - total_sourcing
-        margin_pct = round((gross_profit_per_basket / total_retail) * 100, 1) if total_retail else 0.0
+        sourcing_values = [item.get("estimated_sourcing_cost") for item in shortlisted_items if item.get("estimated_sourcing_cost") is not None]
+        retail_values = [item.get("custom_selling_price") or item.get("recommended_selling_price") for item in shortlisted_items]
+        retail_values = [value for value in retail_values if value is not None]
+        total_sourcing = sum(sourcing_values) if sourcing_values else None
+        total_retail = sum(retail_values) if retail_values else None
+        gross_profit_per_basket = total_retail - total_sourcing if total_retail is not None and total_sourcing is not None else None
+        margin_pct = round((gross_profit_per_basket / total_retail) * 100, 1) if gross_profit_per_basket is not None and total_retail else None
 
         calc_col1.metric("Shortlisted SKUs", len(shortlisted_items))
-        calc_col2.metric("Total Sourcing Cost (1 unit each)", f"₹{total_sourcing:.0f}")
-        calc_col3.metric("Projected Store Basket Value", f"₹{total_retail:.0f}")
-        calc_col4.metric("Avg Gross Margin", f"{margin_pct}%", "+ Safe for FB/Insta Ads")
+        calc_col2.metric("Estimated Sourcing Cost", f"₹{total_sourcing:.0f}" if total_sourcing is not None else "Unavailable")
+        calc_col3.metric("Entered/Suggested Retail Total", f"₹{total_retail:.0f}" if total_retail is not None else "Unavailable")
+        calc_col4.metric("Gross Margin (estimate)", f"{margin_pct}%" if margin_pct is not None else "Unavailable", "Excludes shipping, tax, fees, ads and returns")
 
         st.markdown("---")
 
@@ -1101,15 +1104,19 @@ with tab3:
                         st.markdown(f"**📝 Launch Notes:** `{item.get('notes')}`")
 
                 with sc3:
-                    rec_p = item.get("recommended_selling_price") or 499.0
-                    src_c = item.get("estimated_sourcing_cost") or 150.0
+                    rec_p = item.get("recommended_selling_price")
+                    src_c = item.get("estimated_sourcing_cost")
                     cust_p = item.get("custom_selling_price") or rec_p
+                    market_p = item.get("current_market_price")
                     
-                    st.markdown(f"**Market Price:** ₹{item.get('current_market_price', 0):.0f}")
-                    st.markdown(f"**Wholesale Sourcing:** ₹{src_c:.0f}")
-                    st.markdown(f"**Recommended Website Price:** ₹{rec_p:.0f}")
-                    unit_profit = cust_p - src_c
-                    st.markdown(f"**Net Profit / Unit:** <span style='color:#10b981; font-weight:700;'>₹{unit_profit:.0f}</span>", unsafe_allow_html=True)
+                    st.markdown(f"**Market Price:** ₹{market_p:.0f}" if market_p is not None else "**Market Price:** Unavailable")
+                    st.markdown(f"**Estimated Sourcing:** ₹{src_c:.0f}" if src_c is not None else "**Estimated Sourcing:** Unavailable")
+                    st.markdown(f"**Suggested Website Price:** ₹{rec_p:.0f}" if rec_p is not None else "**Suggested Website Price:** Unavailable")
+                    if cust_p is not None and src_c is not None:
+                        unit_profit = cust_p - src_c
+                        st.markdown(f"**Gross Difference / Unit:** ₹{unit_profit:.0f} (before other costs)")
+                    else:
+                        st.markdown("**Gross Difference / Unit:** Unavailable until costs are entered")
 
                 with sc4:
                     st.write("")
@@ -1135,13 +1142,18 @@ with tab3:
             cust_p = i.get("custom_selling_price")
             rec_p = i.get("recommended_selling_price")
             market_p = i.get("current_market_price", 0)
-            price_val = float(cust_p or rec_p or (market_p * 1.5) or 499.0)
-            compare_price = round(price_val * 1.4, 2)
+            price_candidate = cust_p if cust_p is not None else rec_p
+            if price_candidate is None:
+                price_candidate = market_p
+            if price_candidate is None or float(price_candidate) <= 0:
+                continue
+            price_val = float(price_candidate)
+            compare_price = ""  # No fabricated "compare at" discount price
 
             shopify_rows.append({
                 "Handle": f"prod-{pid.lower()}",
                 "Title": title,
-                "Body (HTML)": f"<p>{marketing}</p><p>Sourced from Verified Quality Hubs in India.</p>",
+                "Body (HTML)": f"<p>{marketing}</p>",
                 "Vendor": "My DTC Brand",
                 "Type": category,
                 "Tags": "Trending, Under 1000, Viral, Indian Market",

@@ -136,17 +136,17 @@ def scrape_amazon_india(search_term: str = "kitchen gadgets under 1000", max_ite
 
             # Rating
             rating_el = item.select_one("i.a-icon-star-small span, span.a-icon-alt")
-            rating = clean_rating(rating_el.text if rating_el else None) or 4.0
+            rating = clean_rating(rating_el.text if rating_el else None)
 
             # Reviews
             rev_el = item.select_one("span.a-size-base.s-underline-text, a[href*='customerReviews'] span")
-            rev_count = clean_review_count(rev_el.text if rev_el else "50")
+            rev_count = clean_review_count(rev_el.text if rev_el else None)
 
             # Link & Image
             link_el = item.select_one("h2 a")
             p_url = f"https://www.amazon.in/dp/{asin}" if asin else (f"https://www.amazon.in{link_el['href']}" if link_el and 'href' in link_el.attrs else "")
             img_el = item.select_one("img.s-image")
-            img_url = img_el.get("src", "") if img_el else "https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=500&q=80"
+            img_url = img_el.get("src", "") if img_el else ""
 
             product_id = f"AMZ_{asin}"
             scraped_products.append({
@@ -157,10 +157,10 @@ def scrape_amazon_india(search_term: str = "kitchen gadgets under 1000", max_ite
                 "price": price,
                 "rating": rating,
                 "review_count": rev_count,
-                "bsr_rank": rank_pos * 40 + random.randint(10, 50),
+                "bsr_rank": None,  # Search position is not a verified bestseller rank
                 "url": p_url,
                 "image_url": img_url,
-                "recent_reviews_text": f"Scraped live from Amazon.in. Rating {rating}/5 with {rev_count} total buyer ratings."
+                "recent_reviews_text": ""  # Search result snippets are not customer review text
             })
             rank_pos += 1
 
@@ -206,15 +206,15 @@ def scrape_meesho(category: str = "kitchen", max_items: int = 8) -> List[Dict[st
                 continue
 
             rating_el = card.select_one("span[class*='Rating'], div[class*='Rating']")
-            rating = clean_rating(rating_el.text if rating_el else None) or 4.1
+            rating = clean_rating(rating_el.text if rating_el else None)
 
             rev_el = card.select_one("span[class*='ReviewCount'], p[class*='Review']")
-            rev_count = clean_review_count(rev_el.text if rev_el else "60")
+            rev_count = clean_review_count(rev_el.text if rev_el else None)
 
             link_el = card.select_one("a")
             p_url = f"https://www.meesho.com{link_el['href']}" if (link_el and 'href' in link_el.attrs) else f"https://www.meesho.com/search?q={category}"
             img_el = card.select_one("img")
-            img_url = img_el.get("src", "") if img_el else "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=500&q=80"
+            img_url = img_el.get("src", "") if img_el else ""
 
             h = hashlib.md5(title.encode()).hexdigest()[:8]
             product_id = f"MSH_{h}"
@@ -227,10 +227,10 @@ def scrape_meesho(category: str = "kitchen", max_items: int = 8) -> List[Dict[st
                 "price": price,
                 "rating": rating,
                 "review_count": rev_count,
-                "bsr_rank": rank_pos * 35 + random.randint(15, 60),
+                "bsr_rank": None,  # Search position is not a verified bestseller rank
                 "url": p_url,
                 "image_url": img_url,
-                "recent_reviews_text": f"Scraped from Meesho catalog. Rating {rating}/5."
+                "recent_reviews_text": ""  # Catalog metadata is not customer review text
             })
             rank_pos += 1
 
@@ -258,108 +258,7 @@ def scrape_with_playwright(url: str) -> Optional[str]:
         return None
 
 
-def generate_live_simulated_batch(count: int = 5) -> List[Dict[str, Any]]:
-    """
-    Generates realistic, fresh Indian market products priced ₹100 - ₹1,000
-    when live scrapers encounter cloud IP blocks, ensuring zero pipeline halts.
-    """
-    logger.info(f"Generating high-fidelity live simulated market batch of {count} products...")
-    
-    market_catalog = [
-        {
-            "platform": "Amazon India",
-            "title": "Collapsible Silicone Electric Kettle 0.6L (Dual Voltage Foldable)",
-            "category": "Home & Kitchen",
-            "price": 699.0,
-            "rating": 4.3,
-            "reviews": 115,
-            "bsr_rank": 78,
-            "url": "https://www.amazon.in/dp/B0KETTLEFOLD",
-            "image_url": "https://images.unsplash.com/photo-1544816155-12df9643f363?w=500&q=80",
-            "reviews_sample": "Boils water in 4 mins during hostel stays. Folds flat like a pancake inside backpack. Food grade silicone smell goes away after one wash."
-        },
-        {
-            "platform": "Meesho",
-            "title": "USB Rechargeable Mini Garlic & Veggie Chopper (Wireless 250ml)",
-            "category": "Kitchen & Dining",
-            "price": 249.0,
-            "rating": 4.2,
-            "reviews": 180,
-            "bsr_rank": 95,
-            "url": "https://www.meesho.com/p/mini-chopper-usb/249",
-            "image_url": "https://images.unsplash.com/photo-1590794056226-79ef3a8147e1?w=500&q=80",
-            "reviews_sample": "Chops 10 garlic pods in 5 seconds without burning hands. Magnetic safety lock prevents blade accidents. Easy to wash."
-        },
-        {
-            "platform": "Amazon India",
-            "title": "Self-Adhesive Stainless Steel Bathroom Corner Shelf (Pack of 2)",
-            "category": "Home Decor & Storage",
-            "price": 389.0,
-            "rating": 4.5,
-            "reviews": 210,
-            "bsr_rank": 62,
-            "url": "https://www.amazon.in/dp/B0BATHSHELF",
-            "image_url": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&q=80",
-            "reviews_sample": "Magic sticker adhesive holds 5kg shampoo bottles easily. Zero rust after 3 months. No drilling damage to rental flat tiles."
-        },
-        {
-            "platform": "Meesho",
-            "title": "Waterproof Bike & Scooter Mobile Mount Holder with Sun Visor",
-            "category": "Automotive Accessories",
-            "price": 199.0,
-            "rating": 4.1,
-            "reviews": 92,
-            "bsr_rank": 140,
-            "url": "https://www.meesho.com/p/bike-phone-holder/199",
-            "image_url": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=500&q=80",
-            "reviews_sample": "Sturdy handlebar clamp. Touch screen works through transparent cover in heavy rain. Sun shield makes Google Maps visible at noon."
-        },
-        {
-            "platform": "Amazon India",
-            "title": "Cheap Knockoff Smart Fitness Band V4",
-            "category": "Electronics Accessories",
-            "price": 249.0,
-            "rating": 3.2,
-            "reviews": 430,
-            "bsr_rank": 490,
-            "url": "https://www.amazon.in/dp/B0FAKEBAND",
-            "image_url": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=500&q=80",
-            "reviews_sample": "duplicate copy, cheap quality plastic band broke in 2 days. heart rate sensor fake shows pulse on table. waste of money not working."
-        },
-        {
-            "platform": "Meesho",
-            "title": "Multi-Layer Rotating Jewelry & Cosmetics Storage Organizer Box",
-            "category": "Home Decor & Storage",
-            "price": 289.0,
-            "rating": 4.4,
-            "reviews": 135,
-            "bsr_rank": 82,
-            "url": "https://www.meesho.com/p/rotating-organizer/289",
-            "image_url": "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&q=80",
-            "reviews_sample": "360 degree rotation is super smooth. Holds earrings, lipsticks and rings with mirror on top. Very aesthetic gift."
-        }
-    ]
-
-    selected = random.sample(market_catalog, min(count, len(market_catalog)))
-    output = []
-    
-    for item in selected:
-        pid = "LIVE_" + hashlib.md5(f"{item['title']}_{time.time()}".encode()).hexdigest()[:8]
-        output.append({
-            "product_id": pid,
-            "platform": item["platform"],
-            "title": item["title"],
-            "category": item["category"],
-            "price": float(item["price"]),
-            "rating": float(item["rating"]),
-            "review_count": int(item["reviews"]),
-            "bsr_rank": int(item["bsr_rank"]),
-            "url": item["url"],
-            "image_url": item["image_url"],
-            "recent_reviews_text": item["reviews_sample"]
-        })
-    return output
-
+# Synthetic product generation was removed; demo fixtures belong only in storage.seed_demo_data().
 
 def import_products_from_csv(csv_file_or_path: Any) -> int:
     """
@@ -385,9 +284,12 @@ def import_products_from_csv(csv_file_or_path: Any) -> int:
             category = str(row.get("category", "General"))
             url = str(row.get("url", ""))
             img = str(row.get("image_url", "https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=500&q=80"))
-            rating = float(row.get("rating", 4.0))
-            rev_count = int(row.get("review_count", 50))
-            bsr = int(row.get("bsr_rank", 200))
+            rating_raw = row.get("rating")
+            rating = None if pd.isna(rating_raw) else float(rating_raw)
+            review_raw = row.get("review_count")
+            rev_count = None if pd.isna(review_raw) else int(review_raw)
+            bsr_raw = row.get("bsr_rank")
+            bsr = None if pd.isna(bsr_raw) else int(bsr_raw)
             rev_text = str(row.get("recent_reviews_text", "Imported via CSV."))
 
             pid = str(row.get("product_id", f"CSV_{hashlib.md5(title.encode()).hexdigest()[:8]}"))
@@ -404,7 +306,7 @@ def import_products_from_csv(csv_file_or_path: Any) -> int:
 
 def run_full_scan(
     search_queries: Optional[List[str]] = None,
-    allow_simulation_fallback: bool = True
+    allow_simulation_fallback: bool = False
 ) -> List[Dict[str, Any]]:
     """
     Executes a market scan for Amazon India and Meesho.
@@ -427,11 +329,9 @@ def run_full_scan(
         collected_products.extend(meesho_items)
         time.sleep(1)
 
-    # Fallback to realistic live-simulated batch if blocked by IP protection
-    if len(collected_products) < 2 and allow_simulation_fallback:
-        logger.info("Live scrapers received minimal results due to platform rate limiting. Supplementing with live-simulated batch.")
-        simulated = generate_live_simulated_batch(count=4)
-        collected_products.extend(simulated)
+    # Simulation fallback intentionally disabled: demo products must never enter a live scan.
+    if allow_simulation_fallback:
+        logger.warning("allow_simulation_fallback is deprecated and ignored; no synthetic products are added to live scans.")
 
     # Persist to SQLite
     today = datetime.now().strftime("%Y-%m-%d")
@@ -459,5 +359,5 @@ def run_full_scan(
 
 
 if __name__ == "__main__":
-    results = run_full_scan(allow_simulation_fallback=True)
+    results = run_full_scan(allow_simulation_fallback=False)
     print(f"Scrape scan completed. Captured {len(results)} products.")
