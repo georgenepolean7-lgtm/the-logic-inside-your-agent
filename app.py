@@ -191,7 +191,7 @@ def get_global_auto_scheduler(default_interval_minutes: int = 5) -> BackgroundSc
 
 
 # Initialize global scheduler on app load (active by default)
-global_scheduler = get_global_auto_scheduler(default_interval_minutes=5)
+global_scheduler = get_global_auto_scheduler(default_interval_minutes=240)
 
 
 # Custom UI Styling
@@ -324,10 +324,10 @@ with st.sidebar:
                 st.rerun()
 
     with col_btn2:
-        if st.button("🧪 Seed Demo", use_container_width=True, help="Loads 10 realistic Indian products with 7-day history"):
+        if st.button("🧪 Load SYNTHETIC DEMO (not real)", use_container_width=True, help="TEST DATA ONLY. Never use demo rows for sourcing or buying decisions."):
             with st.spinner("Seeding 10 demo products..."):
                 seed_demo_data()
-                st.success("Seeded successfully!")
+                st.warning("Synthetic demo data loaded for UI testing only. These are not verified listings, reviews, trends or supplier prices.")
                 st.rerun()
 
     if st.button("🤖 Run AI Analysis on All", use_container_width=True, type="primary"):
@@ -354,7 +354,7 @@ with st.sidebar:
         "4 Hours (Recommended)": 240,
         "12 Hours": 720
     }
-    selected_interval_label = st.selectbox("Auto Cycle Interval", list(interval_options.keys()), index=0)
+    selected_interval_label = st.selectbox("Auto Cycle Interval", list(interval_options.keys()), index=2)
     selected_interval = interval_options[selected_interval_label]
 
     # Dynamically update scheduler job interval if user changed selectbox
