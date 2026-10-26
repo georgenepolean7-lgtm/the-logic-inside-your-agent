@@ -146,7 +146,7 @@ def scrape_amazon_india(search_term: str = "kitchen gadgets under 1000", max_ite
             link_el = item.select_one("h2 a")
             p_url = f"https://www.amazon.in/dp/{asin}" if asin else (f"https://www.amazon.in{link_el['href']}" if link_el and 'href' in link_el.attrs else "")
             img_el = item.select_one("img.s-image")
-            img_url = img_el.get("src", "") if img_el else "https://images.unsplash.com/photo-1540932239986-30128078f3c5?w=500&q=80"
+            img_url = img_el.get("src", "") if img_el else ""
 
             product_id = f"AMZ_{asin}"
             scraped_products.append({
@@ -160,7 +160,7 @@ def scrape_amazon_india(search_term: str = "kitchen gadgets under 1000", max_ite
                 "bsr_rank": None,  # Search position is not a verified bestseller rank
                 "url": p_url,
                 "image_url": img_url,
-                "recent_reviews_text": f"Scraped live from Amazon.in. Rating {rating}/5 with {rev_count} total buyer ratings."
+                "recent_reviews_text": ""  # Search result snippets are not customer review text
             })
             rank_pos += 1
 
@@ -214,7 +214,7 @@ def scrape_meesho(category: str = "kitchen", max_items: int = 8) -> List[Dict[st
             link_el = card.select_one("a")
             p_url = f"https://www.meesho.com{link_el['href']}" if (link_el and 'href' in link_el.attrs) else f"https://www.meesho.com/search?q={category}"
             img_el = card.select_one("img")
-            img_url = img_el.get("src", "") if img_el else "https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=500&q=80"
+            img_url = img_el.get("src", "") if img_el else ""
 
             h = hashlib.md5(title.encode()).hexdigest()[:8]
             product_id = f"MSH_{h}"
@@ -230,7 +230,7 @@ def scrape_meesho(category: str = "kitchen", max_items: int = 8) -> List[Dict[st
                 "bsr_rank": None,  # Search position is not a verified bestseller rank
                 "url": p_url,
                 "image_url": img_url,
-                "recent_reviews_text": f"Scraped from Meesho catalog. Rating {rating}/5."
+                "recent_reviews_text": ""  # Catalog metadata is not customer review text
             })
             rank_pos += 1
 
@@ -430,11 +430,9 @@ def run_full_scan(
         collected_products.extend(meesho_items)
         time.sleep(1)
 
-    # Fallback to realistic live-simulated batch if blocked by IP protection
-    if len(collected_products) < 2 and allow_simulation_fallback:
-        logger.info("Live scrapers received minimal results due to platform rate limiting. Supplementing with live-simulated batch.")
-        simulated = generate_live_simulated_batch(count=4)
-        collected_products.extend(simulated)
+    # Simulation fallback intentionally disabled: demo products must never enter a live scan.
+    if allow_simulation_fallback:
+        logger.warning("allow_simulation_fallback is deprecated and ignored; no synthetic products are added to live scans.")
 
     # Persist to SQLite
     today = datetime.now().strftime("%Y-%m-%d")
