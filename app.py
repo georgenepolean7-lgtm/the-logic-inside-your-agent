@@ -1104,15 +1104,19 @@ with tab3:
                         st.markdown(f"**📝 Launch Notes:** `{item.get('notes')}`")
 
                 with sc3:
-                    rec_p = item.get("recommended_selling_price") or 499.0
-                    src_c = item.get("estimated_sourcing_cost") or 150.0
+                    rec_p = item.get("recommended_selling_price")
+                    src_c = item.get("estimated_sourcing_cost")
                     cust_p = item.get("custom_selling_price") or rec_p
+                    market_p = item.get("current_market_price")
                     
-                    st.markdown(f"**Market Price:** ₹{item.get('current_market_price', 0):.0f}")
-                    st.markdown(f"**Wholesale Sourcing:** ₹{src_c:.0f}")
-                    st.markdown(f"**Recommended Website Price:** ₹{rec_p:.0f}")
-                    unit_profit = cust_p - src_c
-                    st.markdown(f"**Net Profit / Unit:** <span style='color:#10b981; font-weight:700;'>₹{unit_profit:.0f}</span>", unsafe_allow_html=True)
+                    st.markdown(f"**Market Price:** ₹{market_p:.0f}" if market_p is not None else "**Market Price:** Unavailable")
+                    st.markdown(f"**Estimated Sourcing:** ₹{src_c:.0f}" if src_c is not None else "**Estimated Sourcing:** Unavailable")
+                    st.markdown(f"**Suggested Website Price:** ₹{rec_p:.0f}" if rec_p is not None else "**Suggested Website Price:** Unavailable")
+                    if cust_p is not None and src_c is not None:
+                        unit_profit = cust_p - src_c
+                        st.markdown(f"**Gross Difference / Unit:** ₹{unit_profit:.0f} (before other costs)")
+                    else:
+                        st.markdown("**Gross Difference / Unit:** Unavailable until costs are entered")
 
                 with sc4:
                     st.write("")
@@ -1138,13 +1142,18 @@ with tab3:
             cust_p = i.get("custom_selling_price")
             rec_p = i.get("recommended_selling_price")
             market_p = i.get("current_market_price", 0)
-            price_val = float(cust_p or rec_p or (market_p * 1.5) or 499.0)
-            compare_price = round(price_val * 1.4, 2)
+            price_candidate = cust_p if cust_p is not None else rec_p
+            if price_candidate is None:
+                price_candidate = market_p
+            if price_candidate is None or float(price_candidate) <= 0:
+                continue
+            price_val = float(price_candidate)
+            compare_price = ""  # No fabricated "compare at" discount price
 
             shopify_rows.append({
                 "Handle": f"prod-{pid.lower()}",
                 "Title": title,
-                "Body (HTML)": f"<p>{marketing}</p><p>Sourced from Verified Quality Hubs in India.</p>",
+                "Body (HTML)": f"<p>{marketing}</p>",
                 "Vendor": "My DTC Brand",
                 "Type": category,
                 "Tags": "Trending, Under 1000, Viral, Indian Market",
