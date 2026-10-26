@@ -166,41 +166,5 @@ def generate_7day_social_history(
     Generates realistic, continuous 7-day social metrics history (Day -6 to Day 0)
     capturing viral momentum, view velocity, and Google Trends spike.
     """
-    records = []
-    today = datetime.now()
-
-    # Determine product viral persona
-    h = abs(hash(product_id))
-    trend_type = "viral_spike" if h % 3 == 0 else ("steady_growth" if h % 3 == 1 else "cooling")
-    platform = "Instagram Reels" if h % 2 == 0 else "YouTube Shorts"
-
-    for day_offset in range(-6, 1):
-        target_date = (today + timedelta(days=day_offset)).strftime("%Y-%m-%d")
-        progress = (day_offset + 6) / 6.0  # 0.0 to 1.0
-
-        if trend_type == "viral_spike":
-            v_score = int(base_viral_score * 0.65 + (progress * base_viral_score * 0.40))
-            intent_score = int(60 + (progress * 35))
-            g_score = int(55 + (progress * 42))
-        elif trend_type == "steady_growth":
-            v_score = int(base_viral_score * 0.80 + (progress * 15))
-            intent_score = int(68 + (progress * 22))
-            g_score = int(65 + (progress * 20))
-        else:
-            v_score = max(30, int(base_viral_score - (progress * 25)))
-            intent_score = max(25, int(70 - (progress * 30)))
-            g_score = max(20, int(60 - (progress * 35)))
-
-        velocity_7d = round((v_score - (base_viral_score * 0.65)) / max(1, base_viral_score * 0.65) * 100, 1)
-
-        records.append({
-            "product_id": product_id,
-            "date": target_date,
-            "social_views_score": min(99, max(15, v_score)),
-            "buyer_intent_comments_score": min(99, max(15, intent_score)),
-            "google_trend_score": min(99, max(15, g_score)),
-            "viral_velocity_7d": velocity_7d,
-            "trending_platform": platform
-        })
-
-    return records
+    # Synthetic history is not evidence of real demand; wait for verified metrics.
+    return []
