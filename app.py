@@ -1070,15 +1070,18 @@ with tab3:
         st.markdown("#### 💰 **Estimated Portfolio Economics**")
         calc_col1, calc_col2, calc_col3, calc_col4 = st.columns(4)
 
-        total_sourcing = sum(item.get("estimated_sourcing_cost") or (item.get("current_market_price", 0) * 0.4) for item in shortlisted_items)
-        total_retail = sum(item.get("custom_selling_price") or item.get("recommended_selling_price") or (item.get("current_market_price", 0) * 1.5) for item in shortlisted_items)
-        gross_profit_per_basket = total_retail - total_sourcing
-        margin_pct = round((gross_profit_per_basket / total_retail) * 100, 1) if total_retail else 0.0
+        sourcing_values = [item.get("estimated_sourcing_cost") for item in shortlisted_items if item.get("estimated_sourcing_cost") is not None]
+        retail_values = [item.get("custom_selling_price") or item.get("recommended_selling_price") for item in shortlisted_items]
+        retail_values = [value for value in retail_values if value is not None]
+        total_sourcing = sum(sourcing_values) if sourcing_values else None
+        total_retail = sum(retail_values) if retail_values else None
+        gross_profit_per_basket = total_retail - total_sourcing if total_retail is not None and total_sourcing is not None else None
+        margin_pct = round((gross_profit_per_basket / total_retail) * 100, 1) if gross_profit_per_basket is not None and total_retail else None
 
         calc_col1.metric("Shortlisted SKUs", len(shortlisted_items))
-        calc_col2.metric("Total Sourcing Cost (1 unit each)", f"₹{total_sourcing:.0f}")
-        calc_col3.metric("Projected Store Basket Value", f"₹{total_retail:.0f}")
-        calc_col4.metric("Avg Gross Margin", f"{margin_pct}%", "+ Safe for FB/Insta Ads")
+        calc_col2.metric("Estimated Sourcing Cost", f"₹{total_sourcing:.0f}" if total_sourcing is not None else "Unavailable")
+        calc_col3.metric("Entered/Suggested Retail Total", f"₹{total_retail:.0f}" if total_retail is not None else "Unavailable")
+        calc_col4.metric("Gross Margin (estimate)", f"{margin_pct}%" if margin_pct is not None else "Unavailable", "Excludes shipping, tax, fees, ads and returns")
 
         st.markdown("---")
 
