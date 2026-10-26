@@ -298,9 +298,11 @@ def generate_7day_master_verdict(
         category = p.get("category", "General")
 
         # 1. Pillar 1: 7-Day E-com BSR & Review Consistency (25% weight)
-        bsr_imp = calculate_bsr_improvement(pid)
-        rev_vel = calculate_review_velocity(pid)
-        price_chg = calculate_7day_price_change(pid)
+        # Existing SQLite history predates source/provenance tracking and may contain
+        # simulated rows. Do not use it as evidence until verified-source migration exists.
+        bsr_imp = 0.0
+        rev_vel = 0
+        price_chg = 0.0
 
         # Baseline pillar 1
         p1 = 60.0
@@ -319,7 +321,9 @@ def generate_7day_master_verdict(
         p1 = min(99.0, max(10.0, p1))
 
         # 2. Pillar 2: Social Media Viral & "Link Please" Velocity (25% weight)
-        social_history = get_social_metrics_history(pid, limit=7)
+        # Existing social history may include previously synthesized records. Ignore it
+        # until every row has trustworthy source and timestamp provenance.
+        social_history = []
         # Missing social/search evidence is unknown, not a positive signal.
         # Never synthesize a 7-day history or substitute optimistic defaults.
         latest_social = social_history[-1] if social_history else {}
