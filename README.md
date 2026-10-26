@@ -41,13 +41,15 @@ flowchart TD
 - **Historical Math Helpers**: Computes 7-day price drop %, review velocity (new reviews added in past 7 days), and BSR rank improvement % (lower rank = higher sales).
 - **`seed_demo_data()`**: Seeds 10 realistic Indian products with 7 days of historical metrics so the dashboard works out of the box.
 
-### 2. `scraper.py` (Resilient Indian Market Data Collector)
+### 2. `scraper.py` (Indian Market Data Collector)
 - Scrapes **Amazon India** Movers & Shakers / Best Sellers and **Meesho** catalog listings.
 - Strictly bounds prices: `100 <= price <= 1000`.
 - Rotating User-Agent headers, anti-bot handling, and Playwright headless structure.
 - **Resilient Fallback**: If marketplace CAPTCHAs/rate-limits block automated requests, it gracefully switches to live simulated batches or CSV imports, ensuring zero pipeline halts.
 
 ### 3. `analyzer.py` (The AI Brain)
+
+**Important:** Suggested sourcing costs, retail prices, and margins are heuristic estimates, not supplier quotes or guaranteed profits. Verify costs, shipping, GST, payment fees, returns, ad spend and affiliate eligibility before investing.
 - Built on the official `google-genai` SDK using `gemini-2.5-flash` with structured Pydantic schema (`ProductAnalysisResult`).
 - **Two-Step Evaluation**:
   - **Step A (Rule-Based Scoring)**:
@@ -178,3 +180,12 @@ The Logic Inside Your Agent/
 4. **Queue for Your Store**: Review auto-shortlisted winners or manually click **➕ Add to Website Shortlist**.
 5. **Export Catalog**: Go to **Tab 3** to download ready-to-import CSVs for **Shopify**, **WooCommerce**, or JSON for custom builds.
 6. **Check Any Product**: Go to **Tab 4** and paste any link, price, or review to get an instant AI verdict.
+
+
+## Data Integrity & Verification
+
+- Live scrape results may be incomplete or blocked. No simulated products are inserted into a live scan.
+- Missing rating/review/BSR data is not filled with optimistic defaults.
+- Social history is not generated when live evidence is absent; legacy trend history without source provenance is ignored.
+- Run checks with `python -m compileall -q .` and `python -m unittest discover -s tests -v`. GitHub Actions runs these checks on branch pushes and pull requests.
+- Demo-seeded products and CSV imports should be labeled and verified before any purchasing or marketing decision.
