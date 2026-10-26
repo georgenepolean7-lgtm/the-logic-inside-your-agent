@@ -47,7 +47,7 @@ def analyze_buyer_intent(comments: List[str]) -> Dict[str, Any]:
     Analyzes social comments to calculate high-intent buyer ratio vs negative friction ratio.
     """
     if not comments:
-        return {"intent_score": 60, "positive_count": 0, "negative_count": 0, "dominant_phrase": "Neutral demand"}
+        return {"intent_score": None, "positive_count": 0, "negative_count": 0, "total_analyzed": 0, "dominant_phrase": "Unavailable: no comments"}
 
     pos_matches = 0
     neg_matches = 0
@@ -70,7 +70,7 @@ def analyze_buyer_intent(comments: List[str]) -> Dict[str, Any]:
 
     total = len(comments)
     net_score = max(10, min(99, int(50 + (pos_matches * 12) - (neg_matches * 15))))
-    most_common = max(set(detected_intent_phrases), key=detected_intent_phrases.count) if detected_intent_phrases else "Link please"
+    most_common = max(set(detected_intent_phrases), key=detected_intent_phrases.count) if detected_intent_phrases else "No buyer-intent phrase detected"
 
     return {
         "intent_score": net_score,
