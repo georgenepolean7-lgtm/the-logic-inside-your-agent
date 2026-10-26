@@ -89,7 +89,7 @@ def update_env_variable(key: str, value: str, env_path: str = ".env") -> None:
 
 
 def build_current_whatsapp_report(limit: int = 3) -> str:
-    """Builds a formatted WhatsApp report of winning products."""
+    """Build a report without inventing missing prices or sellability scores."""
     shortlisted = get_shortlist()
     if not shortlisted:
         all_p = get_all_products_with_latest_data()
@@ -97,31 +97,30 @@ def build_current_whatsapp_report(limit: int = 3) -> str:
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
     msg = (
-        f"🚀 *The Logic Inside Your Agent — Winning Products Report*\n"
-        f"🎯 Focus: ₹100–₹1,000 Sweet Spot (Amazon & Meesho)\n"
-        f"📅 Date: {now_str}\n\n"
+        f"🚀 *The Logic Inside Your Agent — Product Research Report*\\n"
+        f"🎯 Focus: ₹100–₹1,000 (Amazon & Meesho)\\n"
+        f"📅 Date: {now_str}\\n\\n"
     )
     if not shortlisted:
-        msg += "⚠️ No shortlisted products yet. Run a market scan from your dashboard!"
-        return msg
+        return msg + "⚠️ No verified shortlist available yet. Run a live market scan first."
 
     for i, item in enumerate(shortlisted[:limit], 1):
-        p_name = item.get("title", "")
-        m_price = item.get("current_market_price", 0) or item.get("price", 0)
-        s_price = item.get("custom_selling_price") or item.get("recommended_selling_price") or (m_price * 1.5)
-        score = item.get("sellability_score") or 85
-        tanglish = item.get("marketing_angle_for_website") or "High demand impulse buy item."
+        p_name = item.get("title", "Untitled product")
+        m_price = item.get("current_market_price", item.get("price"))
+        s_price = item.get("custom_selling_price") or item.get("recommended_selling_price")
+        score = item.get("sellability_score")
+        tanglish = item.get("marketing_angle_for_website") or "Marketing angle not yet verified."
+        market_text = f"₹{m_price:.0f}" if isinstance(m_price, (int, float)) else "Unavailable"
+        sell_text = f"₹{s_price:.0f}" if isinstance(s_price, (int, float)) else "Not estimated"
+        score_text = f"{score}/100" if isinstance(score, (int, float)) else "Not scored"
         msg += (
-            f"-----------------------------\n"
-            f"📦 *#{i}: {p_name[:60]}*\n"
-            f"💰 Market Price: ₹{m_price:.0f} | 🎯 Website Price: ₹{s_price:.0f}\n"
-            f"⭐ Score: `{score}/100`\n"
-            f"🗣️ *Hook:* _{tanglish[:90]}_\n"
+            f"-----------------------------\\n"
+            f"📦 *#{i}: {p_name[:60]}*\\n"
+            f"💰 Market Price: {market_text} | Suggested Price: {sell_text}\\n"
+            f"⭐ Score: `{score_text}`\\n"
+            f"🗣️ *Hook:* _{tanglish[:90]}_\\n"
         )
-    msg += (
-        f"-----------------------------\n"
-        f"👉 Ready for Shopify/WooCommerce catalog export."
-    )
+    msg += "-----------------------------\\n⚠️ Verify live price, seller, stock, and affiliate eligibility before publishing."
     return msg
 
 # Page configuration
