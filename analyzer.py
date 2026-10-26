@@ -70,6 +70,28 @@ def evaluate_rule_based_signals(product: Dict[str, Any]) -> Dict[str, Any]:
     bsr_improvement_7d = float(product.get("bsr_improvement_7d") or 0.0)
     recent_reviews = str(product.get("recent_reviews_text") or "").lower()
 
+    # Unknown core metrics must not be silently converted into a positive/neutral verdict.
+    has_core_evidence = (
+        product.get("price") is not None
+        and product.get("rating") is not None
+        and product.get("review_count") is not None
+    )
+    if not has_core_evidence:
+        safe_price = price if price > 0 else 0.0
+        return {
+            "trend_status": "Stable",
+            "sellability_score": 25,
+            "website_ready": False,
+            "recommended_selling_price": round(safe_price, 2),
+            "estimated_sourcing_cost": 0.0,
+            "estimated_margin_pct": 0.0,
+            "customer_pain_points": "Insufficient verified rating/review data to assess customer experience.",
+            "marketing_angle_for_website": "Not available until core market evidence is verified.",
+            "ai_reasoning": "Provisional only: price, rating, or review count is missing. No demand or quality claim is made.",
+            "red_flags": "Missing core marketplace evidence; verify listing and metrics before sourcing or promoting.",
+            "ai_summary_tamil_english": "Innum data complete illa. Rating, review count, price verify pannama indha product-ku money invest panna vendam."
+        }
+
     # 1. Check for Drop Signals (Dying Trend)
     has_negative_keywords = any(kw in recent_reviews for kw in NEGATIVE_KEYWORDS)
     severe_price_crash = price_change_7d <= -15.0
@@ -139,7 +161,7 @@ def evaluate_rule_based_signals(product: Dict[str, Any]) -> Dict[str, Any]:
             "marketing_angle_for_website": "Direct-to-consumer viral problem solver. Position as a premium daily utility with Free Cash On Delivery.",
             "ai_reasoning": f"Strong organic demand momentum. Review count is {review_count} (unsaturated sweet spot), rating is {rating}/5, and sales velocity improved by {bsr_improvement_7d}% in the last 7 days.",
             "red_flags": "Inspect quality samples from supplier before ordering in batches greater than 100 units.",
-            "ai_summary_tamil_english": f"Semma winning product! BSR improvement {bsr_improvement_7d}%, wholesale sourcing ₹{est_sourcing}-la kedaikkum. Website-la ₹{rec_selling}-ku sell panna 50%+ profit confirm."
+            "ai_summary_tamil_english": f"Potential candidate based on available signals only. Estimated sourcing ₹{est_sourcing} and target price ₹{rec_selling}; verify supplier quote, fees, shipping, tax and returns before calculating profit."
         }
 
     # 4. Stable or Moderate Performance
