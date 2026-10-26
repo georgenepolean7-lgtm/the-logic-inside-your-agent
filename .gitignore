@@ -18,5 +18,5 @@ __pycache__/
 *.db-wal
 *.db-shm
 
-# Track database
-!products_history.db
+# Local SQLite database and any generated/demo history
+products_history.db
