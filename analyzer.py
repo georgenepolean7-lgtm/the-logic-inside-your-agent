@@ -70,6 +70,28 @@ def evaluate_rule_based_signals(product: Dict[str, Any]) -> Dict[str, Any]:
     bsr_improvement_7d = float(product.get("bsr_improvement_7d") or 0.0)
     recent_reviews = str(product.get("recent_reviews_text") or "").lower()
 
+    # Unknown core metrics must not be silently converted into a positive/neutral verdict.
+    has_core_evidence = (
+        product.get("price") is not None
+        and product.get("rating") is not None
+        and product.get("review_count") is not None
+    )
+    if not has_core_evidence:
+        safe_price = price if price > 0 else 0.0
+        return {
+            "trend_status": "Stable",
+            "sellability_score": 25,
+            "website_ready": False,
+            "recommended_selling_price": round(safe_price, 2),
+            "estimated_sourcing_cost": 0.0,
+            "estimated_margin_pct": 0.0,
+            "customer_pain_points": "Insufficient verified rating/review data to assess customer experience.",
+            "marketing_angle_for_website": "Not available until core market evidence is verified.",
+            "ai_reasoning": "Provisional only: price, rating, or review count is missing. No demand or quality claim is made.",
+            "red_flags": "Missing core marketplace evidence; verify listing and metrics before sourcing or promoting.",
+            "ai_summary_tamil_english": "Innum data complete illa. Rating, review count, price verify pannama indha product-ku money invest panna vendam."
+        }
+
     # 1. Check for Drop Signals (Dying Trend)
     has_negative_keywords = any(kw in recent_reviews for kw in NEGATIVE_KEYWORDS)
     severe_price_crash = price_change_7d <= -15.0
@@ -139,7 +161,7 @@ def evaluate_rule_based_signals(product: Dict[str, Any]) -> Dict[str, Any]:
             "marketing_angle_for_website": "Direct-to-consumer viral problem solver. Position as a premium daily utility with Free Cash On Delivery.",
             "ai_reasoning": f"Strong organic demand momentum. Review count is {review_count} (unsaturated sweet spot), rating is {rating}/5, and sales velocity improved by {bsr_improvement_7d}% in the last 7 days.",
             "red_flags": "Inspect quality samples from supplier before ordering in batches greater than 100 units.",
-            "ai_summary_tamil_english": f"Semma winning product! BSR improvement {bsr_improvement_7d}%, wholesale sourcing ₹{est_sourcing}-la kedaikkum. Website-la ₹{rec_selling}-ku sell panna 50%+ profit confirm."
+            "ai_summary_tamil_english": f"Potential candidate based on available signals only. Estimated sourcing ₹{est_sourcing} and target price ₹{rec_selling}; verify supplier quote, fees, shipping, tax and returns before calculating profit."
         }
 
     # 4. Stable or Moderate Performance
@@ -298,9 +320,11 @@ def generate_7day_master_verdict(
         category = p.get("category", "General")
 
         # 1. Pillar 1: 7-Day E-com BSR & Review Consistency (25% weight)
-        bsr_imp = calculate_bsr_improvement(pid)
-        rev_vel = calculate_review_velocity(pid)
-        price_chg = calculate_7day_price_change(pid)
+        # Existing SQLite history predates source/provenance tracking and may contain
+        # simulated rows. Do not use it as evidence until verified-source migration exists.
+        bsr_imp = 0.0
+        rev_vel = 0
+        price_chg = 0.0
 
         # Baseline pillar 1
         p1 = 60.0
@@ -319,30 +343,20 @@ def generate_7day_master_verdict(
         p1 = min(99.0, max(10.0, p1))
 
         # 2. Pillar 2: Social Media Viral & "Link Please" Velocity (25% weight)
-        social_history = get_social_metrics_history(pid, limit=7)
-        if not social_history:
-            # Generate and persist if absent
-            gen_records = generate_7day_social_history(pid, title, base_viral_score=float(p.get("sellability_score") or 75))
-            for s in gen_records:
-                insert_social_metric(
-                    product_id=pid,
-                    date_str=s["date"],
-                    social_views_score=s["social_views_score"],
-                    buyer_intent_comments_score=s["buyer_intent_comments_score"],
-                    google_trend_score=s["google_trend_score"],
-                    viral_velocity_7d=s["viral_velocity_7d"],
-                    trending_platform=s["trending_platform"]
-                )
-            social_history = gen_records
-
+        # Existing social history may include previously synthesized records. Ignore it
+        # until every row has trustworthy source and timestamp provenance.
+        social_history = []
+        # Missing social/search evidence is unknown, not a positive signal.
+        # Never synthesize a 7-day history or substitute optimistic defaults.
         latest_social = social_history[-1] if social_history else {}
-        views_score = float(latest_social.get("social_views_score", 70))
-        intent_score = float(latest_social.get("buyer_intent_comments_score", 65))
-        p2 = min(99.0, max(15.0, (views_score * 0.5) + (intent_score * 0.5)))
+        social_data_available = bool(social_history)
+        views_score = float(latest_social.get("social_views_score") or 0)
+        intent_score = float(latest_social.get("buyer_intent_comments_score") or 0)
+        p2 = min(99.0, max(0.0, (views_score * 0.5) + (intent_score * 0.5))) if social_data_available else 0.0
 
-        # 3. Pillar 3: Google Trends Spike in India (15% weight)
-        g_score = float(latest_social.get("google_trend_score", 65))
-        p3 = min(99.0, max(15.0, g_score))
+        # 3. Google Trends Spike in India (15% weight)
+        g_score = float(latest_social.get("google_trend_score") or 0)
+        p3 = min(99.0, max(0.0, g_score)) if social_data_available else 0.0
 
         # 4. Pillar 4: Unit Economics & Wholesale Margin (20% weight)
         # Retail ₹100–₹1,000, 3x markup from IndiaMart
@@ -379,14 +393,16 @@ def generate_7day_master_verdict(
             (p5 * 0.15),
             1
         )
-        confidence = min(99.2, max(15.0, confidence))
+        if not social_data_available:
+            confidence = min(confidence, 59.0)  # provisional only; key evidence is missing
+        confidence = min(99.2, max(0.0, confidence))
 
         # Launch Blueprint Details
         clean_kw = " ".join(title.split()[:3])
         blueprint = {
             "pillar_1_ecom_consistency": f"{p1:.1f}% (BSR trend: {bsr_imp:.1f}%, review velocity: +{rev_vel})",
-            "pillar_2_social_viral": f"{p2:.1f}% (Social view velocity + high buyer comment intent)",
-            "pillar_3_google_spike": f"{p3:.1f}% (Active 7-day Google Trends search momentum in India)",
+            "pillar_2_social_viral": f"{p2:.1f}% ({'stored metrics' if social_data_available else 'UNAVAILABLE: no verified social metrics'})",
+            "pillar_3_google_spike": f"{p3:.1f}% ({'stored trend metrics' if social_data_available else 'UNAVAILABLE: no verified Google Trends history'})",
             "pillar_4_unit_economics": f"{p4:.1f}% (Sourcing: ₹{est_sourcing:.0f}, Target: ₹{target_price:.0f}, Profit: ₹{net_profit:.0f}/unit)",
             "pillar_5_monopoly_check": f"{p5:.1f}% (Review saturation: {reviews} reviews, rating: {rating}/5.0)",
             "target_audience": f"Urban Indian buyers looking for impulse problem-solvers in {category}",
@@ -395,7 +411,7 @@ def generate_7day_master_verdict(
         }
 
         tanglish_summary = (
-            f"🔥 99% Launch Candidate ({confidence}% Confidence)! 7-day BSR improvement {bsr_imp:.1f}% and viral social spike. "
+            f"Provisional launch score ({confidence}%). Social/search evidence: {'available' if social_data_available else 'unavailable; confidence capped'}. 7-day BSR improvement {bsr_imp:.1f}%. "
             f"Wholesale sourcing ₹{est_sourcing:.0f}, target selling price ₹{target_price:.0f} (Net profit ₹{net_profit:.0f}/unit)."
         )
 

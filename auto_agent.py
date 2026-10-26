@@ -527,7 +527,7 @@ def run_autonomous_cycle(api_key: Optional[str] = None) -> Dict[str, Any]:
         logger.info("Step 1: Scraping fresh market listings (₹100 - ₹1000)...")
         scraped_items = run_full_scan(
             search_queries=["trending gadgets under 1000", "kitchen tools under 500", "impulse buy items under 800"],
-            allow_simulation_fallback=True
+            allow_simulation_fallback=False
         )
         scraped_count = len(scraped_items)
         logger.info(f"Captured {scraped_count} product metrics.")
